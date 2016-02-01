@@ -1,0 +1,23 @@
+<html>
+  <head>
+    <title>My Doves Eye!</title>
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+  </head>
+  <body>
+    <!-- TODO navigation, logo -->
+    <h1>{{title}}</h1>
+    <!-- TODO loop of posts -->
+
+    {{#each posts}}
+      <hr>
+      <h4>{{this.name}}</h4>
+      <p>{{this.text}}</p>
+      <span class="love">{{this.love}}</span>
+      <ul>
+        {{#each this.tags}}
+          <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    {{/each}}
+  </body>
+</html>
