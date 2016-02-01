@@ -1,43 +1,30 @@
 'use strict';
 
 const Hapi = require('hapi');
-const mongoose = require('mongoose');
 const Path = require('path');
 const Hoek = require('hoek');
+const q = require('q');
 const server = new Hapi.Server();
 
 server.connection({ port: 3000 });
 
+// Mock data
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
 // Schema
-var contentSchema = mongoose.Schema({
-  name: String,
+var contentSchema = new Schema({
+  name: { type: String, required: true},
   text: String,
   tags: Array,
   type: String,
   slug: String,
   love: Number,
-  date: Date
+  date: { type:Date, default:Date.now }
 });
 
 var Post = mongoose.model('Post', contentSchema);
-var Page = mongoose.model('Page', contentSchema);
-// var Recipe = mongoose.model('Recipe', contentSchema);
 
-var about = new Page({
-  name: 'About',
-  slug: 'about',
-  text: 'My name is ria and nat is so haaawwt...',
-  type: 'page'
-})
-
-var contact = new Page({
-  name: 'Contact',
-  slug: 'contact',
-  type: 'page',
-  text: '<b>bla</b><p>again</p>'
-})
-
-// Mock data
 var test = new Post({ 
   date: Date(),
   love:13, 
@@ -57,14 +44,16 @@ var test2 = new Post({
   text: 'pog ihetgpiuh! riu hoiuwheg, iwuehg iweugh wiugh. weiguh werilgu hwerlgi uwherg weorvhsdof87g 837 i3u4h3983hutg',
   type: 'post'
 });
+
 server.register(require('inert'), (err) => {
   Hoek.assert(!err, err);
+  // public assets: css, js, img, static html
   server.route({
     method: 'GET',
-    path: '/css/{param*}',
+    path: '/public/{param*}',
     handler: {
       directory: {
-        path: 'public/css/'
+        path: 'public/'
       }
     }
   });
@@ -72,9 +61,7 @@ server.register(require('inert'), (err) => {
 
 // Views Config
 server.register(require('vision'), (err) => {
-
     Hoek.assert(!err, err);
-
     server.views({
         engines: {
             html: require('handlebars')
@@ -83,6 +70,8 @@ server.register(require('vision'), (err) => {
         path: 'templates'
     });
 });
+
+var allPosts = Post.find({}).limit(1).exec();
 
 // Index Page
 server.route({
@@ -93,35 +82,18 @@ server.route({
       template: 'index',
       context: {
         title: 'My home page',
-        posts: [test, test2] // TODO query last 5 order by date desc.
+        posts: q.all(allPosts).then((posts) => {return posts})
       }
     }
   }
 });
 
-// Regular Page
-server.route({
-  method: 'GET',
-  path: '/{slug}',
-  handler: {
-    view: {
-      template: 'page',
-      // TODO look up the page by slug
-      context: {
-        name: 'About'
-      }
-    }
-  }
-});
-
+// DB and Server Initialization
 
 var mongodbUri = 'mongodb://localhost/mydoveseye';
 mongoose.connect(mongodbUri);
-
 var db = mongoose.connection;
-
 db.on('error', console.error.bind(console, 'connection error:'));
-
 db.once('open', () => {
   console.log('MongoDB running at: ', mongodbUri);
   server.start(() => {
